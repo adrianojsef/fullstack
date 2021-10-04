@@ -2,8 +2,8 @@ import Header from "./components/Header";
 import Form from "./components/Form";
 import Contacts from "./components/Contacts";
 import Input from "./components/Input";
-import { phonebook } from "./datasets/phonebook";
-import { useState } from "react";
+import axios from "axios";
+import { useEffect, useState } from "react";
 
 class Contact {
 	constructor (name, number) {
@@ -13,11 +13,19 @@ class Contact {
 }
 
 function App() {
-	const [contacts, setContacts] = useState(phonebook);
+	const [contacts, setContacts] = useState([]);
 	const [newName, setNewName] = useState('');
 	const [newNumber, setNewNumber] = useState('');
 	const [filter, setFilter] = useState('');
 	const [filteredContacts, setFilteredContacts] = useState([]);
+
+	useEffect(() => {
+		axios
+			.get('http://localhost:3001/persons')
+			.then(response => {
+				setContacts(response.data);
+			});
+	}, []);
 
 	const filterContacts = (event) => {
 		setFilter(event.target.value);
