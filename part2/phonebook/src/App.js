@@ -2,6 +2,7 @@ import Header from "./components/Header";
 import Form from "./components/Form";
 import Contacts from "./components/Contacts";
 import Input from "./components/Input";
+import Notification from "./components/Notification";
 import contactService from "./services/contacts";
 import { useEffect, useState } from "react";
 
@@ -19,14 +20,22 @@ function App() {
 	const [newNumber, setNewNumber] = useState('');
 	const [filter, setFilter] = useState('');
 	const [filteredContacts, setFilteredContacts] = useState([]);
+	const [notification, setNotification] = useState({ message: '', type: '' });
+	const [clearNotification, setClearNotification] = useState();
+
+	function setupNotification(newNotification) {
+		setNotification(newNotification);
+
+		clearTimeout(clearNotification);
+		setClearNotification(setTimeout(() => setNotification({ message: '', type: '' }), 5000));
+	}
 
 	useEffect(() => {
 		contactService
 			.getAll()
 			.then(list => setContacts(list))
-			.catch(error => {
-				alert('could not retrieve the list of contacts from the server');
-				console.log('could not retrive the list of contacts from the server', error);
+			.catch(() => {
+				setupNotification({ message: 'Could not retrieve the list of contacts from the server', type: 'error' });
 				setContacts([]);
 			});
 	}, []);
@@ -40,11 +49,13 @@ function App() {
 		event.preventDefault();
 
 		if (!newName) {
-			return alert('the new name cannot be empty');
+			setupNotification({ message: 'The new name cannot be empty', type: 'error' });
+			return;
 		}
 
 		if (!newNumber) {
-			return alert('the new number cannot be empty');
+			setupNotification({ message: 'The new number cannot be empty', type: 'error' });
+			return;
 		}
 
 		const existingContact = contacts.find(contact => contact.name.toLowerCase() === newName.toLowerCase());
@@ -53,10 +64,19 @@ function App() {
 			if (window.confirm(`${existingContact.name} is already added to the phonebook, replace the old number with a new one?`)) {
 				contactService
 					.update(existingContact.id, { ...existingContact, number: newNumber })
-					.then(contactUpdated => setContacts([ ...contacts.filter(contact => contact.id !== contactUpdated.id), contactUpdated ]))
+					.then(contactUpdated => {
+						setupNotification({ message: `Updated ${contactUpdated.name}`, type: 'success' });
+						setContacts([ ...contacts.filter(contact => contact.id !== contactUpdated.id), contactUpdated ]);
+					})
 					.catch(error => {
-						alert('could not update the contact number');
-						console.log('could not update the contact number', error);
+						switch(error.response?.status) {
+							case 404:
+								setupNotification({ message: 'The contact no longer exists', type: 'error' });
+								break;
+							
+							default:
+								setupNotification({ message: 'Could not update the contact', type: 'error' });
+						}
 					});
 			}
 
@@ -68,20 +88,31 @@ function App() {
 
 		contactService
 			.create(new Contact(newId, newName, newNumber))
-			.then(newContact => setContacts(contacts.concat(newContact)))
-			.catch(error => {
-				alert(`could not create a new contact`);
-				console.log('could not create a new contact', error);
-			});
+			.then(newContact => {
+				setupNotification({ message: `Added ${newContact.name}`, type: 'success' });
+				setContacts(contacts.concat(newContact));
+			})
+			.catch(() => setupNotification({ message: 'Could not create a new contact', type: 'error' }));
 	}
 
 	const deleteContact = (id) => {
 		contactService
 			.remove(id)
-			.then(data => setContacts(contacts.filter(contact => contact.id !== id)))
+			.then(() => {
+				const removedContact = contacts.find(contact => contact.id === id);
+				setupNotification({ message: `Removed ${removedContact.name}`, type: 'success' });
+				setContacts(contacts.filter(contact => contact.id !== id));
+			})
 			.catch(error => {
-				alert('could not remove the contact');
-				console.log('could not remove the contact', error);
+				switch(error.response?.status) {
+					case 404:
+						setupNotification({ message: 'The contact has already been removed before', type: 'warning' });
+						setContacts(contacts.filter(contact => contact.id !== id));
+						break;
+					
+					default:
+						setupNotification({ message: 'Could not update the contact', type: 'error' });
+				}
 			});
 	}
 
@@ -93,6 +124,7 @@ function App() {
 	return (
 		<>
 			<Header level="2" text="Phonebook" />
+			<Notification message={notification.message} type={notification.type} />
 			<Input label="filter shown with" name="filter" value={filter} handler={filterContacts} />
 			<Header level="3" text="add a new" />
 			<Form action={addContact} fields={fields} buttonLabel="add" />

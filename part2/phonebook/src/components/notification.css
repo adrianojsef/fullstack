@@ -1,0 +1,44 @@
+.notification {
+    padding: 8px;
+    margin: 16px 0;
+    border: 2px solid grey;
+    border-radius: 4px;
+    text-align: left;
+    font-weight: bold;
+}
+
+.notification.success {
+    color: green;
+    background-color: lightgreen;
+    border-color: green;
+}
+
+.notification.info {
+    color: blue;
+    background-color: lightblue;
+    border-color: blue;
+}
+
+.notification.warning {
+    color: orange;
+    background-color: lightyellow;
+    border-color: orange;
+}
+
+.notification.error {
+    color: red;
+    background-color: lightpink;
+    border-color: red;
+}
+
+.notification > span {
+    display: inline-block;
+}
+
+.notification > button {
+    background-color: transparent;
+    border: 1px solid grey;
+    border-radius: 4px;
+    float: right;
+    content: 'x';
+}
